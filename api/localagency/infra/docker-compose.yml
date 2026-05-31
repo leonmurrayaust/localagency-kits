@@ -1,0 +1,282 @@
+# ── Docker Compose for LocalAgency Kits (Phase 2) ───────────────────────────
+# Single VM deployment with 5 services + 3 managed dependencies.
+# No Kubernetes — Docker Compose is sufficient for 3-6 pilot clients.
+# Evaluate K3s for Phase 3 (15+ clients), EKS/GKE for Phase 4 (60+ clients).
+
+services:
+  # ── API Gateway (FastAPI) ──────────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localagency-api-gateway:latest
+    container_name: localagency-api-gateway
+    command: >
+      uvicorn localagency.gateway.app:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 2
+      --log-level info
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://localagency:localagency@postgres:5432/localagency
+      - REDIS_URL=redis://redis:6379/0
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - STRIPE_API_KEY=${STRIPE_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - localagency-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # ── Exception Dashboard (FastAPI + Jinja2 + HTMX) ─────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localagency-dashboard:latest
+    container_name: localagency-dashboard
+    command: >
+      uvicorn localagency.dashboard.app:dashboard_app
+      --host 0.0.0.0
+      --port 8080
+      --log-level info
+    ports:
+      - "8080:8080"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://localagency:localagency@postgres:5432/localagency
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - localagency-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # ── VoiceKit Worker (Python + LangGraph) ───────────────────────────────────
+  voicekit-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localagency-voicekit:latest
+    container_name: localagency-voicekit
+    command: >
+      python -m localagency.services.voicekit_worker
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://localagency:localagency@postgres:5432/localagency
+      - REDIS_URL=redis://redis:6379/0
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - localagency-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ── Celery Workers (async task processing) ────────────────────────────────
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localagency-celery:latest
+    container_name: localagency-celery-worker
+    command: >
+      celery -A localagency.infra.tasks worker
+      --loglevel=info
+      --concurrency=4
+      --max-tasks-per-child=100
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://localagency:localagency@postgres:5432/localagency
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - localagency-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # ── Celery Beat (scheduled tasks) ─────────────────────────────────────────
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localagency-celery:latest
+    container_name: localagency-celery-beat
+    command: >
+      celery -A localagency.infra.tasks beat
+      --loglevel=info
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://localagency:localagency@postgres:5432/localagency
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - localagency-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: localagency-postgres
+    environment:
+      POSTGRES_USER: localagency
+      POSTGRES_PASSWORD: localagency
+      POSTGRES_DB: localagency
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./localagency/infra/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - localagency-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localagency"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: localagency-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - localagency-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+  # ── Monitoring (Prometheus + Grafana) ─────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: localagency-prometheus
+    volumes:
+      - ./localagency/infra/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+    restart: unless-stopped
+    networks:
+      - localagency-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: localagency-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=localagency
+      - GF_INSTALL_PLUGINS=
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - localagency-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+# ── Networks ──────────────────────────────────────────────────────────────────
+networks:
+  localagency-net:
+    driver: bridge
+
+# ── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-100">P0/P1 Alerts</h1>
+    <div class="flex items-center space-x-2">
+        <span class="text-sm text-gray-500">{{ alert_count }} alert(s)</span>
+        <!-- Severity filter -->
+        <div class="flex space-x-1 text-sm">
+            <a href="/alerts"
+               class="px-3 py-1 rounded {% if active_severity == 'all' %}bg-gray-700 text-white{% else %}text-gray-500 hover:text-gray-300{% endif %} transition-colors">
+                All
+            </a>
+            <a href="/alerts?severity=P0"
+               class="px-3 py-1 rounded {% if active_severity == 'P0' %}bg-red-900 text-red-300{% else %}text-gray-500 hover:text-gray-300{% endif %} transition-colors">
+                P0
+            </a>
+            <a href="/alerts?severity=P1"
+               class="px-3 py-1 rounded {% if active_severity == 'P1' %}bg-orange-900 text-orange-300{% else %}text-gray-500 hover:text-gray-300{% endif %} transition-colors">
+                P1
+            </a>
+            <a href="/alerts?severity=P2"
+               class="px-3 py-1 rounded {% if active_severity == 'P2' %}bg-yellow-900 text-yellow-300{% else %}text-gray-500 hover:text-gray-300{% endif %} transition-colors">
+                P2
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if alerts %}
+<div class="space-y-3">
+    {% for alert in alerts %}
+    <div class="bg-gray-900 rounded-lg p-4 border-l-4
+        {% if alert.severity == 'P0' %}border-red-500
+        {% elif alert.severity == 'P1' %}border-orange-500
+        {% elif alert.severity == 'P2' %}border-yellow-500
+        {% else %}border-gray-600{% endif %}
+        hover:bg-gray-850 transition-colors">
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <div class="flex items-center space-x-2">
+                    <span class="px-2 py-0.5 rounded text-xs font-medium
+                        {% if alert.severity == 'P0' %}bg-red-900 text-red-300
+                        {% elif alert.severity == 'P1' %}bg-orange-900 text-orange-300
+                        {% elif alert.severity == 'P2' %}bg-yellow-900 text-yellow-300
+                        {% else %}bg-gray-700 text-gray-300{% endif %}">
+                        {{ alert.severity }}
+                    </span>
+                    <h3 class="font-medium text-gray-200">{{ alert.title }}</h3>
+                    {% if alert.client_id %}
+                    <span class="text-xs text-gray-500">client: {{ alert.client_id|truncate(12, True, "") }}</span>
+                    {% endif %}
+                </div>
+                <p class="text-sm text-gray-400 mt-1">{{ alert.message }}</p>
+                <div class="flex items-center space-x-4 mt-2 text-xs text-gray-600">
+                    <span>{{ alert.timestamp|replace("T", " ")|truncate(19, True, "") }}</span>
+                    {% if alert.call_sid %}
+                    <span>call: {{ alert.call_sid }}</span>
+                    {% endif %}
+                    {% if alert.trace_id %}
+                    <span>trace: {{ alert.trace_id|truncate(16, True, "") }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-16">
+    <div class="text-4xl mb-4">🟢</div>
+    <p class="text-gray-500 text-lg">No active alerts. All systems nominal.</p>
+    <p class="text-gray-600 text-sm mt-2">Alerts appear here when P0-P2 events are triggered.</p>
+</div>
+{% endif %}
+
+{% endblock %}

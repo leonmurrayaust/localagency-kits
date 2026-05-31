@@ -1,0 +1,29 @@
+<!-- HTMX Fragment: Recent Calls Table -->
+{% if calls %}
+<tbody>
+    {% for call in calls %}
+    <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+        <td class="py-2 text-gray-300">{{ call.timestamp|replace("T", " ")|truncate(19, True, "") }}</td>
+        <td class="py-2">
+            <span class="text-gray-300">{{ call.client_id|truncate(12, True, "") }}</span>
+        </td>
+        <td class="py-2">
+            {% if call.booking_made %}
+            <span class="text-green-400 font-medium">Booked</span>
+            {% elif call.escalated %}
+            <span class="text-red-400 font-medium">Escalated</span>
+            {% elif call.error %}
+            <span class="text-yellow-400 font-medium">Error</span>
+            {% else %}
+            <span class="text-gray-400">Completed</span>
+            {% endif %}
+        </td>
+        <td class="py-2 text-right text-gray-500">{{ call.duration }}s</td>
+    </tr>
+    {% endfor %}
+</tbody>
+{% else %}
+<tbody>
+    <tr><td colspan="4" class="text-gray-500 text-center py-4">No recent calls</td></tr>
+</tbody>
+{% endif %}

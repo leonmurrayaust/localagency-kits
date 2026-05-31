@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Exception Dashboard{% endblock %} — LocalAgency Kits</title>
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        agency: {
+                            50:  '#ecfeff',
+                            100: '#cffafe',
+                            200: '#a5f3fc',
+                            300: '#67e8f9',
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            700: '#0e7490',
+                            800: '#155e75',
+                            900: '#164e63',
+                            950: '#083344',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans antialiased min-h-screen">
+    <!-- ── Navigation ─────────────────────────────────────────────────── -->
+    <nav class="border-b border-gray-800 bg-gray-900 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/" class="flex items-center space-x-2">
+                        <span class="text-xl font-bold text-cyan-400">LocalAgency</span>
+                        <span class="text-sm text-gray-500 hidden sm:inline">Kits</span>
+                    </a>
+                    <span class="text-xs text-gray-600 hidden lg:inline">Exception Dashboard</span>
+                    <div class="hidden md:flex space-x-1">
+                        <a href="/"
+                           class="{% if request.url.path == '/' %}bg-gray-800 text-cyan-400{% else %}text-gray-400 hover:text-gray-200{% endif %} px-3 py-2 text-sm font-medium rounded-md transition-colors">
+                            Overview
+                        </a>
+                        <a href="/alerts"
+                           class="{% if request.url.path == '/alerts' %}bg-gray-800 text-cyan-400{% else %}text-gray-400 hover:text-gray-200{% endif %} px-3 py-2 text-sm font-medium rounded-md transition-colors">
+                            Alerts
+                        </a>
+                        <a href="/missed-calls"
+                           class="{% if request.url.path == '/missed-calls' %}bg-gray-800 text-cyan-400{% else %}text-gray-400 hover:text-gray-200{% endif %} px-3 py-2 text-sm font-medium rounded-md transition-colors">
+                            Missed Calls
+                        </a>
+                        <a href="/bookings"
+                           class="{% if request.url.path == '/bookings' %}bg-gray-800 text-cyan-400{% else %}text-gray-400 hover:text-gray-200{% endif %} px-3 py-2 text-sm font-medium rounded-md transition-colors">
+                            Bookings
+                        </a>
+                        <a href="/errors"
+                           class="{% if request.url.path == '/errors' %}bg-gray-800 text-cyan-400{% else %}text-gray-400 hover:text-gray-200{% endif %} px-3 py-2 text-sm font-medium rounded-md transition-colors">
+                            Error Log
+                        </a>
+                        <a href="/circuit-breakers"
+                           class="{% if request.url.path == '/circuit-breakers' %}bg-gray-800 text-cyan-400{% else %}text-gray-400 hover:text-gray-200{% endif %} px-3 py-2 text-sm font-medium rounded-md transition-colors">
+                            Systems
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- Alert badge — HTMX auto-refresh every 30s -->
+                    <span id="alert-badge"
+                          hx-get="/fragments/alert-count"
+                          hx-trigger="every 30s"
+                          hx-swap="innerHTML"
+                          class="inline-flex items-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-600 text-gray-300">0</span>
+                    </span>
+                    <!-- Live clock -->
+                    <span class="text-sm text-gray-500 font-mono" id="clock"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Mobile nav (collapsed) ─────────────────────────────────────── -->
+    <div class="md:hidden border-b border-gray-800 bg-gray-900/50">
+        <div class="flex overflow-x-auto px-4 py-2 space-x-2 text-sm">
+            <a href="/" class="{% if request.url.path == '/' %}text-cyan-400{% else %}text-gray-500{% endif %} whitespace-nowrap">Overview</a>
+            <a href="/alerts" class="{% if request.url.path == '/alerts' %}text-cyan-400{% else %}text-gray-500{% endif %} whitespace-nowrap">Alerts</a>
+            <a href="/missed-calls" class="{% if request.url.path == '/missed-calls' %}text-cyan-400{% else %}text-gray-500{% endif %} whitespace-nowrap">Missed</a>
+            <a href="/bookings" class="{% if request.url.path == '/bookings' %}text-cyan-400{% else %}text-gray-500{% endif %} whitespace-nowrap">Bookings</a>
+            <a href="/errors" class="{% if request.url.path == '/errors' %}text-cyan-400{% else %}text-gray-500{% endif %} whitespace-nowrap">Errors</a>
+            <a href="/circuit-breakers" class="{% if request.url.path == '/circuit-breakers' %}text-cyan-400{% else %}text-gray-500{% endif %} whitespace-nowrap">Systems</a>
+        </div>
+    </div>
+
+    <!-- ── Main Content ───────────────────────────────────────────────── -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ── Footer ─────────────────────────────────────────────────────── -->
+    <footer class="border-t border-gray-800 mt-12 py-4 text-center text-xs text-gray-600">
+        LocalAgency Kits &middot; Exception Dashboard &middot;
+        <span hx-get="/fragments/health-status" hx-trigger="every 60s" hx-swap="innerHTML">
+            <span class="text-green-500">connected</span>
+        </span>
+    </footer>
+
+    <!-- ── Global Scripts ─────────────────────────────────────────────── -->
+    <script src="/static/dashboard.js"></script>
+    <script>
+        // Live clock update
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Flash auto-dismiss
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[data-flash]').forEach(function(el) {
+                setTimeout(function() { el.remove(); }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>

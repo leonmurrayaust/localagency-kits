@@ -1,0 +1,98 @@
+/*
+ * LocalAgency Kits — Exception Dashboard
+ * Custom styles layered over Tailwind CSS.
+ * Minimal additions — Tailwind handles almost everything.
+ */
+
+/* ── Base ──────────────────────────────────────────────────────────── */
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── HTMX Animations ───────────────────────────────────────────────── */
+.htmx-swapping {
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+}
+
+.htmx-added {
+    animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+}
+
+/* ── Tables ────────────────────────────────────────────────────────── */
+th {
+    font-weight: 500;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+}
+
+/* ── Focus / Outline ───────────────────────────────────────────────── */
+a:focus-visible,
+button:focus-visible {
+    outline: 2px solid #22d3ee;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ── Loading Indicator ──────────────────────────────────────────────── */
+.htmx-indicator {
+    opacity: 0;
+    transition: opacity 0.15s ease-in;
+}
+
+.htmx-request .htmx-indicator {
+    opacity: 1;
+}
+
+.htmx-request .htmx-indicator-inline {
+    display: inline-block;
+}
+
+/* ── Status Pulse (for degrading health) ───────────────────────────── */
+@keyframes pulse-slow {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 2s ease-in-out infinite;
+}
+
+/* ── Card Hover ────────────────────────────────────────────────────── */
+.card-hover {
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.card-hover:hover {
+    border-color: #374151;
+}

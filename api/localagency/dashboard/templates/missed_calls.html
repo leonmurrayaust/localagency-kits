@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Missed Calls{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-100">Missed Calls</h1>
+    <span class="text-sm text-gray-500">{{ missed_count }} call(s)</span>
+</div>
+
+{% if missed_calls %}
+<div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-gray-500 border-b border-gray-800 bg-gray-900/80">
+                <th class="text-left py-3 px-4 font-medium">Time</th>
+                <th class="text-left py-3 px-4 font-medium">Client</th>
+                <th class="text-left py-3 px-4 font-medium">Caller</th>
+                <th class="text-left py-3 px-4 font-medium">Reason</th>
+                <th class="text-right py-3 px-4 font-medium">Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for call in missed_calls %}
+            <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                <td class="py-3 px-4 text-gray-300 whitespace-nowrap">{{ call.timestamp|replace("T", " ")|truncate(19, True, "") }}</td>
+                <td class="py-3 px-4">
+                    <span class="text-gray-300">{{ call.client_id|truncate(16, True, "") }}</span>
+                </td>
+                <td class="py-3 px-4 font-mono text-gray-400">{{ call.caller_number }}</td>
+                <td class="py-3 px-4">
+                    {% if call.error %}
+                    <span class="text-yellow-400 text-xs">{{ call.error|truncate(60, True, "") }}</span>
+                    {% elif call.escalated %}
+                    <span class="text-orange-400">Escalated to founder</span>
+                    {% else %}
+                    <span class="text-gray-500">Unknown</span>
+                    {% endif %}
+                </td>
+                <td class="py-3 px-4 text-right text-gray-500">{{ call.duration }}s</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-16">
+    <div class="text-4xl mb-4">📞</div>
+    <p class="text-gray-500 text-lg">No missed calls today.</p>
+    <p class="text-gray-600 text-sm mt-2">All calls handled successfully by VoiceKit.</p>
+</div>
+{% endif %}
+
+{% endblock %}
