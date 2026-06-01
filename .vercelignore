@@ -1,0 +1,4 @@
+backend
+.env.example
+.gitignore
+.vercelignore
